@@ -1,5 +1,24 @@
 const socket = io("https://batalla-naval-uzi8.onrender.com");
 
+document.addEventListener("click", unlockAudio);
+
+function unlockAudio() {
+  if (Howler.ctx && Howler.ctx.state !== "running") {
+    Howler.ctx.resume();
+  }
+
+  // reproducir sonido silencioso para desbloquear
+  const unlockSound = new Howl({
+    src: ['sounds/radar.mp3'],
+    volume: 0
+  });
+
+  unlockSound.play();
+
+  // solo una vez
+  document.removeEventListener("click", unlockAudio);
+}
+
 let roomId = null;
 
 createBoard("playerBoard");
