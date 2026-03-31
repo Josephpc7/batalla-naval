@@ -1,4 +1,4 @@
-const socket = io();
+const socket = io("https://batalla-naval-uzi8.onrender.com");
 
 let roomId = null;
 
