@@ -28,6 +28,15 @@ function createRoom() {
   socket.emit("createRoom");
 }
 
+function sendShips() {
+  socket.emit("placeShips", { roomId, board: playerBoard });
+  alert("Esperando al otro jugador...");
+}
+
+socket.on("allReady", () => {
+  document.getElementById("status").innerText = "¡Ambos listos! A jugar";
+});
+
 function joinRoom() {
   const id = document.getElementById("roomInput").value;
   socket.emit("joinRoom", id);
