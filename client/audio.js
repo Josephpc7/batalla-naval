@@ -7,7 +7,8 @@ const waterSound = new Howl({
 });
 
 const radarSound = new Howl({
-  src: ['sounds/radar.mp3']
+  src: ['sounds/radar.mp3'],
+  volume: 0.25
 });
 
 function playExplosion() { explosionSound.play(); }
