@@ -69,3 +69,19 @@ socket.on("shotResult", ({ x, y, result }) => {
 function shoot(x, y) {
   socket.emit("shoot", { roomId, x, y });
 }
+
+let ready = false;
+
+function sendShips() {
+  ready = true;
+  socket.emit("placeShips", { roomId, board: playerBoard });
+}
+
+function shoot(x, y) {
+  if (!ready) {
+    alert("Primero coloca tus barcos");
+    return;
+  }
+
+  socket.emit("shoot", { roomId, x, y });
+}
