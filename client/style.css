@@ -1,0 +1,36 @@
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #001f3f;
+  color: white;
+}
+
+#boards {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  margin-top: 20px;
+}
+
+#playerBoard, #enemyBoard {
+  display: grid;
+  grid-template-columns: repeat(10, 30px);
+}
+
+.cell {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #00aaff;
+}
+
+.hit {
+  background: red;
+}
+
+.miss {
+  background: white;
+}
+
+.ship {
+  background: gray;
+}
