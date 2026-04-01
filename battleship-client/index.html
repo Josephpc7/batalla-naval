@@ -1337,10 +1337,7 @@ const SFX = (() => {
 
     // Barco enemigo hundido
     sunk() {
-      noise({ vol: 0.65, duration: 0.8, filterFreq: 400, filterType: 'lowpass' });
-      tone({ freq: 65, type: 'sawtooth', vol: 0.48, attack: 0.005, decay: 0.7, freqEnd: 20 });
-      noise({ vol: 0.35, duration: 0.5, filterFreq: 200, filterType: 'lowpass', start: 0.25 });
-      tone({ freq: 200, vol: 0.15, decay: 0.4, freqEnd: 80, start: 0.1 });
+      if (!muted) { const e = new Audio('sounds/explosion.mp3'); e.volume = 0.9; e.play().catch(()=>{}); }
     },
 
     // Mi barco recibe impacto
@@ -1351,9 +1348,7 @@ const SFX = (() => {
 
     // Mi barco hundido
     mySunk() {
-      noise({ vol: 0.55, duration: 0.75, filterFreq: 350, filterType: 'lowpass' });
-      tone({ freq: 55, type: 'sawtooth', vol: 0.42, attack: 0.005, decay: 0.65, freqEnd: 18 });
-      tone({ freq: 220, vol: 0.18, decay: 0.5, freqEnd: 110, start: 0.1 });
+      if (!muted) { const e = new Audio('sounds/explosion.mp3'); e.volume = 0.65; e.play().catch(()=>{}); }
     },
 
     // Es mi turno
@@ -1387,159 +1382,60 @@ const SFX = (() => {
 // MÚSICA DE TENSIÓN — FONDO DURANTE COMBATE
 // ══════════════════════════════════════════════
 const BGMusic = (() => {
-  let bgCtx = null;
-  let masterGain = null;
-  let droneOscs = [];
-  let pulseTimer = null;
-  let arpTimer = null;
-  let running = false;
+  let audio = null;
+  let fadeTimer = null;
 
-  function getCtx() {
-    if (!bgCtx) bgCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (bgCtx.state === 'suspended') bgCtx.resume();
-    return bgCtx;
-  }
-
-  function getMaster() {
-    if (!masterGain) {
-      const c = getCtx();
-      masterGain = c.createGain();
-      masterGain.gain.value = 0;
-      masterGain.connect(c.destination);
+  function getAudio() {
+    if (!audio) {
+      audio = new Audio('sounds/playback.mp3');
+      audio.loop = true;
+      audio.volume = 0;
     }
-    return masterGain;
+    return audio;
   }
 
-  function startDrones() {
-    const c = getCtx();
-    const dest = getMaster();
-    // Cuatro osciladores desafinados en capas para un zumbido denso y amenazante
-    const defs = [
-      { freq: 55,   gVal: 0.14 },
-      { freq: 55.5, gVal: 0.13 },
-      { freq: 110,  gVal: 0.07 },
-      { freq: 82.5, gVal: 0.08 },
-    ];
-    defs.forEach(({ freq, gVal }) => {
-      const osc = c.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.value = freq;
-      const filter = c.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 320;
-      filter.Q.value = 2;
-      // LFO lento para vibrato sutil
-      const lfo = c.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.18 + Math.random() * 0.15;
-      const lfoGain = c.createGain();
-      lfoGain.gain.value = 0.4;
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      const g = c.createGain();
-      g.gain.value = gVal;
-      osc.connect(filter);
-      filter.connect(g);
-      g.connect(dest);
-      osc.start(); lfo.start();
-      droneOscs.push(osc, lfo);
-    });
-  }
-
-  function doPulse() {
-    if (!running) return;
-    const c = getCtx();
-    const dest = getMaster();
-    const t = c.currentTime;
-    // Primer golpe de latido
-    const o1 = c.createOscillator();
-    o1.type = 'sine';
-    o1.frequency.setValueAtTime(88, t);
-    o1.frequency.exponentialRampToValueAtTime(28, t + 0.18);
-    const g1 = c.createGain();
-    g1.gain.setValueAtTime(0.42, t);
-    g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
-    o1.connect(g1); g1.connect(dest);
-    o1.start(t); o1.stop(t + 0.36);
-    // Segundo golpe más suave ~400ms después
-    const t2 = t + 0.42;
-    const o2 = c.createOscillator();
-    o2.type = 'sine';
-    o2.frequency.setValueAtTime(66, t2);
-    o2.frequency.exponentialRampToValueAtTime(22, t2 + 0.12);
-    const g2 = c.createGain();
-    g2.gain.setValueAtTime(0.26, t2);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.24);
-    o2.connect(g2); g2.connect(dest);
-    o2.start(t2); o2.stop(t2 + 0.28);
-  }
-
-  function scheduleArp() {
-    if (!running) return;
-    const c = getCtx();
-    const dest = getMaster();
-    const t = c.currentTime;
-    // Arpegio menor descendente/ascendente para tensión (Re menor)
-    const pattern = [147, 175, 220, 247, 293, 247, 220, 175];
-    const step = 0.30;
-    pattern.forEach((freq, i) => {
-      const osc = c.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      const flt = c.createBiquadFilter();
-      flt.type = 'bandpass';
-      flt.frequency.value = freq * 1.5;
-      flt.Q.value = 6;
-      const g = c.createGain();
-      const nt = t + i * step;
-      g.gain.setValueAtTime(0.0001, nt);
-      g.gain.linearRampToValueAtTime(0.075, nt + 0.04);
-      g.gain.exponentialRampToValueAtTime(0.0001, nt + 0.22);
-      osc.connect(flt); flt.connect(g); g.connect(dest);
-      osc.start(nt); osc.stop(nt + 0.26);
-    });
-    const arpDuration = pattern.length * step * 1000;
-    arpTimer = setTimeout(scheduleArp, arpDuration + 1800 + Math.random() * 2500);
+  function fadeTo(target, duration, onDone) {
+    if (fadeTimer) clearInterval(fadeTimer);
+    const a = getAudio();
+    const steps = Math.ceil(duration / 60);
+    const delta = (target - a.volume) / steps;
+    let step = 0;
+    fadeTimer = setInterval(() => {
+      step++;
+      a.volume = Math.max(0, Math.min(1, a.volume + delta));
+      if (step >= steps) {
+        clearInterval(fadeTimer);
+        fadeTimer = null;
+        a.volume = target;
+        if (onDone) onDone();
+      }
+    }, 60);
   }
 
   return {
     start() {
-      if (running) return;
-      running = true;
-      const c = getCtx();
-      const g = getMaster();
-      g.gain.cancelScheduledValues(c.currentTime);
-      g.gain.setValueAtTime(0, c.currentTime);
-      g.gain.linearRampToValueAtTime(SFX.muted ? 0 : 0.65, c.currentTime + 4);
-      startDrones();
-      pulseTimer = setInterval(doPulse, 1150);
-      doPulse();
-      arpTimer = setTimeout(scheduleArp, 3200);
+      if (SFX.muted) return;
+      const a = getAudio();
+      a.currentTime = 0;
+      a.volume = 0;
+      a.play().catch(() => {});
+      fadeTo(0.7, 4000);
     },
 
     stop() {
-      if (!running) return;
-      running = false;
-      if (pulseTimer) { clearInterval(pulseTimer); pulseTimer = null; }
-      if (arpTimer) { clearTimeout(arpTimer); arpTimer = null; }
-      if (masterGain && bgCtx) {
-        masterGain.gain.cancelScheduledValues(bgCtx.currentTime);
-        masterGain.gain.setValueAtTime(masterGain.gain.value, bgCtx.currentTime);
-        masterGain.gain.linearRampToValueAtTime(0, bgCtx.currentTime + 2.5);
-      }
-      setTimeout(() => {
-        droneOscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
-        droneOscs = [];
-        if (masterGain) { try { masterGain.disconnect(); } catch(e){} masterGain = null; }
-        if (bgCtx) { try { bgCtx.close(); } catch(e){} bgCtx = null; }
-      }, 3000);
+      if (!audio) return;
+      fadeTo(0, 2500, () => { audio.pause(); audio.currentTime = 0; });
     },
 
     setMuted(muted) {
-      if (!masterGain || !bgCtx) return;
-      masterGain.gain.cancelScheduledValues(bgCtx.currentTime);
-      masterGain.gain.setValueAtTime(masterGain.gain.value, bgCtx.currentTime);
-      masterGain.gain.linearRampToValueAtTime(muted ? 0 : 0.65, bgCtx.currentTime + 0.5);
+      if (muted) {
+        if (audio) { audio.pause(); }
+      } else {
+        const a = getAudio();
+        a.volume = 0;
+        a.play().catch(() => {});
+        fadeTo(0.7, 1500);
+      }
     }
   };
 })();
