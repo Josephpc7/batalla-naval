@@ -1231,6 +1231,8 @@ document.addEventListener('keydown',e=>{
 const SFX = (() => {
   let ctx = null;
   let muted = false;
+  const _explosion = new Audio('sounds/explosion.mp3');
+  _explosion.preload = 'auto';
 
   function getCtx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1337,7 +1339,7 @@ const SFX = (() => {
 
     // Barco enemigo hundido
     sunk() {
-      if (!muted) { const e = new Audio('sounds/explosion.mp3'); e.volume = 0.9; e.play().catch(()=>{}); }
+      if (!muted) { const e = _explosion.cloneNode(); e.volume = 0.9; e.play().catch(()=>{}); }
     },
 
     // Mi barco recibe impacto
@@ -1348,7 +1350,7 @@ const SFX = (() => {
 
     // Mi barco hundido
     mySunk() {
-      if (!muted) { const e = new Audio('sounds/explosion.mp3'); e.volume = 0.65; e.play().catch(()=>{}); }
+      if (!muted) { const e = _explosion.cloneNode(); e.volume = 0.65; e.play().catch(()=>{}); }
     },
 
     // Es mi turno
@@ -1384,6 +1386,7 @@ const SFX = (() => {
 const BGMusic = (() => {
   let audio = null;
   let fadeTimer = null;
+  let playing = false;
 
   function getAudio() {
     if (!audio) {
@@ -1415,6 +1418,8 @@ const BGMusic = (() => {
   return {
     start() {
       if (SFX.muted) return;
+      if (playing) return;
+      playing = true;
       const a = getAudio();
       a.currentTime = 0;
       a.volume = 0;
@@ -1424,6 +1429,7 @@ const BGMusic = (() => {
 
     stop() {
       if (!audio) return;
+      playing = false;
       fadeTo(0, 2500, () => { audio.pause(); audio.currentTime = 0; });
     },
 
@@ -1448,6 +1454,15 @@ function toggleMute() {
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
+function _unlockAudio() {
+  BGMusic.start();
+  document.removeEventListener('click', _unlockAudio);
+  document.removeEventListener('keydown', _unlockAudio);
+  document.removeEventListener('touchstart', _unlockAudio);
+}
+document.addEventListener('click', _unlockAudio);
+document.addEventListener('keydown', _unlockAudio);
+document.addEventListener('touchstart', _unlockAudio);
 connect();
 </script>
 </body>
